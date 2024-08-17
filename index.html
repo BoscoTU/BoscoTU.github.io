@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to the Student Council Lending System</title>
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+    <script src="sync_connection.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        .form-container {
+            width: 90%;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .button {
+            padding: 20px 40px;
+            margin: 5px;
+            background-color: Chartreuse;
+            color: black;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-align: center;
+            flex: 1;
+            margin-right: 10px; /* Add space between buttons */
+        }
+
+        .button:last-child {
+            margin-right: 0; /* Remove margin for last button */
+        }
+
+        .button:hover {
+            background-color: #a0d65e;
+        }
+        #management .button {
+            background-color: coral; /* Change button color */
+            color: black; /* Change text color */
+}
+
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Student Council Lending System</h1>
+    <div class="button-container">
+        <a href="bform_v1.7.html" class="button">Borrow Now</a>
+        <a href="rform_v1.7.html" class="button" style="background-color: skyblue
+        ;">Return Now</a>
+    </div>
+
+    <p>Created by Bosco TU, Collision(2023-2024)</p>
+    <div class="button-container" id="management"></div>
+    <script>    
+    window.onload = function() {
+        const management = document.getElementById('management');
+        const userId = "Admin"; // Change this as needed
+        if (userId === "Admin") {
+            management.innerHTML = `
+                <a href="setting.html" class="button" id="management">Settings</a>`;
+        }
+    
+        // Initialize synchronization
+        initializeSync();
+    };
+    </script>
+
+</body>
+</html>

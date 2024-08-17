@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borrow Form</title>
+    <style>
+        .additional-info {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Borrow Form</h1>
+    <form id="borrowForm">
+        <label for="items">Select an item:</label>
+        <div id="items">
+            <!-- Radio buttons will be added here dynamically -->
+        </div>
+        <div id="additionalInfo" class="additional-info">
+            <!-- Additional info fields will be added here dynamically -->
+        </div>
+        <button type="submit">Submit</button>
+    </form>
+
+    <h2>Results:</h2>
+    <table id="resultsTable" border="1">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Additional Info</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Results will be added here dynamically -->
+        </tbody>
+    </table>
+
+    <script>
+        // Initialize IndexedDB
+        function openIndexedDB(dbName, dbVersion, objectStores) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, dbVersion);
+
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    objectStores.forEach(storeName => {
+                        if (!db.objectStoreNames.contains(storeName)) {
+                            db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+                        }
+                    });
+                };
+
+                request.onsuccess = event => resolve(event.target.result);
+                request.onerror = event => reject(event.target.error);
+            });
+        }
+
+        // Add mock data to IndexedDB
+        function addMockDataToIndexedDB(db, storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+
+                const items = [
+                    { name: 'Item A', description: 'Additional Info is a checkbox' },
+                    { name: 'Item B', description: 'Additional Info is a text input' },
+                    { name: 'Item C', description: 'Additional Info is a text input' }
+                ];
+
+                let addCount = 0;
+                items.forEach(item => {
+                    const request = store.add(item);
+                    request.onsuccess = () => {
+                        addCount++;
+                        if (addCount === items.length) resolve();
+                    };
+                    request.onerror = event => reject(event.target.error);
+                });
+            });
+        }
+
+        // Fetch data from IndexedDB
+        function fetchDataFromIndexedDB(db, storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+
+                request.onsuccess = event => resolve(event.target.result);
+                request.onerror = event => reject(event.target.error);
+            });
+        }
+
+        // Save result to IndexedDB
+        function saveResultToIndexedDB(db, storeName, data) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.add(data);
+
+                request.onsuccess = () => resolve();
+                request.onerror = event => reject(event.target.error);
+            });
+        }
+
+        // Display results in a table
+        function displayResults(results) {
+            const tbody = document.getElementById('resultsTable').querySelector('tbody');
+            tbody.innerHTML = ''; // Clear existing results
+
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${result.itemName}</td>
+                    <td>${result.additionalInfo}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('borrowForm').addEventListener('submit', event => {
+            event.preventDefault();
+            const selectedItem = document.querySelector('input[name="item"]:checked');
+            const additionalInfoContainer = document.getElementById('additionalInfo');
+
+            if (selectedItem) {
+                const additionalInfo = additionalInfoContainer.querySelector('input').value;
+                const formData = {
+                    itemName: selectedItem.value,
+                    additionalInfo: additionalInfo
+                };
+
+                openIndexedDB('borrowDB', 1, ['items', 'mockResult'])
+                    .then(db => saveResultToIndexedDB(db, 'mockResult', formData))
+                    .then(() => fetchDataFromIndexedDB(db, 'mockResult'))
+                    .then(results => displayResults(results))
+                    .catch(error => console.error('Error handling form submission:', error));
+            } else {
+                console.error('No item selected.');
+            }
+        });
+
+        // Initialize IndexedDB and add mock data
+        openIndexedDB('borrowDB', 1, ['items', 'mockResult'])
+            .then(db => addMockDataToIndexedDB(db, 'items'))
+            .catch(error => console.error('Error initializing IndexedDB:', error));
+
+        // Update form fields based on selected item
+        function updateFormFields(item) {
+            const additionalInfoContainer = document.getElementById('additionalInfo');
+            additionalInfoContainer.innerHTML = ''; // Clear previous fields
+
+            if (item) {
+                const description = item.description;
+                if (description.includes('checkbox')) {
+                    additionalInfoContainer.innerHTML = `
+                        <label for="additionalInfoCheckbox">Additional Info:</label>
+                        <input type="checkbox" id="additionalInfoCheckbox">
+                    `;
+                } else {
+                    additionalInfoContainer.innerHTML = `
+                        <label for="additionalInfoInput">Additional Info:</label>
+                        <input type="text" id="additionalInfoInput">
+                    `;
+                }
+            }
+        }
+
+        // Fetch and populate items
+        openIndexedDB('borrowDB', 1, ['items'])
+            .then(db => fetchDataFromIndexedDB(db, 'items'))
+            .then(items => {
+                const itemsContainer = document.getElementById('items');
+                items.forEach(item => {
+                    const label = document.createElement('label');
+                    label.innerHTML = `
+                        <input type="radio" name="item" value="${item.name}" onclick="updateFormFields(${JSON.stringify(item)})">
+                        ${item.name}
+                    `;
+                    itemsContainer.appendChild(label);
+                });
+            })
+            .catch(error => console.error('Error fetching items:', error));
+
+    </script>
+</body>
+</html>

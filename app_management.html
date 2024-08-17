@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App management</title>
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.0/dist/pouchdb.min.js"></script>
+
+    <script src="sync_connection.js"></script>
+    <script src="item_input_connection.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+
+
+      .container {
+        width: 100%;
+        max-width: 1300px;
+        margin: 50px auto;
+        padding: 20px;
+        border-radius: 10px;
+        background-color: #ffffff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+      }
+
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      h5 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        min-width: 700px;
+      }
+
+
+      table,
+      th,
+      td {
+        border: 0.5px solid #ccc;
+      }
+
+
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+      }
+
+
+      th {
+        background-color: #f5f5f5;
+      }
+
+
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+
+      .mdl-spinner {
+        display: none;
+        margin: auto;
+      }
+
+
+      @media screen and (max-width: 1024px) {
+        .container {
+          padding: 10px;
+        }
+
+
+        table {
+          min-width: 600px;
+        }
+
+
+        th,
+        td {
+          padding: 8px;
+          font-size: 14px;
+        }
+      }
+
+
+/* Styles for the buttons */
+.button-container {
+  display: flex;
+  justify-content: center; /* Center the buttons */
+  gap: 30px; /* Space between buttons */
+  margin-top: 20px;
+}
+
+
+.button {
+  padding: 10px 10px; /* Adjust padding to make buttons narrower */
+  color: black;
+  text-decoration: none;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  text-align: center;
+  flex: 1;
+  margin: 0 5px; /* Symmetrical margins */
+}
+
+
+#add-item-btn {
+  background-color: lightgreen;
+}
+
+
+#add-item-btn:hover {
+  background-color: #9acd32;
+}
+
+
+#search-btn {
+  background-color: skyblue;
+}
+
+
+#search-btn:hover {
+  background-color: #4a90e2;
+}
+
+
+#reset-btn {
+  background-color: lightgrey;
+  color: black;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+#reset-btn:hover {
+  background-color: grey;
+  color: white;
+}
+
+
+#management {
+  background-color: coral;
+  color: black;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+#management:hover {
+  background-color: #e5534b;
+  
+}
+
+
+      input[type="date"] {
+        color: black;
+        background-color: transparent;
+        border: none;
+        font-size: 16px;
+        padding: 10px;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        position: relative;
+      }
+
+
+      input[type="date"]::-webkit-datetime-edit {
+        color: black;
+        opacity: 1;
+      }
+
+
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        color: black;
+        opacity: 1;
+        cursor: pointer;
+      }
+
+
+      input[type="date"]::-webkit-clear-button,
+      input[type="date"]::-webkit-inner-spin-button {
+        display: none;
+      }
+
+/* Add this CSS to center the text in the table row */
+#user-history-body td {
+    text-align: center; /* Center text horizontally */
+    vertical-align: middle; /* Center text vertically */
+    padding: 20px 0; /* Optional: Add some padding for better appearance */
+}
+/* Add this CSS to center the text in the "No results found" message */
+.no-results {
+    text-align: center;
+    vertical-align: middle;
+    padding: 20px 0;
+}
+#delete-item-btn {
+    background-color: lightgray;
+    color: black; /* Text color */
+    transition: background-color 0.3s; /* Smooth transition */
+}
+
+#delete-item-btn:hover {
+    background-color: gray;
+    color: black; /* Optional: change text color on hover */
+}
+
+.slider-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .slider-container input[type="radio"] {
+            display: none;
+        }
+
+        .slider-container label {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #f0f0f0;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: background-color 0.3s, border 0.3s;
+            border-radius: 5px;
+        }
+
+        .slider-container input[type="radio"]:checked + label {
+            background-color: #007bff;
+            color: white;
+            border: 2px solid #0056b3;
+        }
+
+        .slider-container label:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+  </head>
+  <body>
+    <div class="container mdl-shadow--2dp">
+      <h1>Item input management</h1>
+      <!-- Restore and Return Buttons -->
+      <div class="button-container">
+        <a class="button" id="add-item-btn">Add items</a>
+        <a id="delete-item-btn" class="button">Remove items</a>
+        <a href="setting.html" class="button" id="management">Return</a>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div class="mdl-spinner mdl-js-spinner is-active"></div>
+
+
+      <!-- User History Table -->
+      <div class="table-responsive">
+        <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Have_additional_info</th>
+              <th>Additional_info_type</th>
+              <th>Input_description</th>
+            </tr>
+          </thead>
+          <tbody id="item-input-body">
+            <td colspan="11" class="no-results">No results found</td>
+          </tbody>
+        </table>
+      </div>
+      <h5>Mock input field</h5>
+            <div class="slider-container" id="mock-item-input-body">
+            </div>
+            <div id="additional-info"></div>
+            <div class="error-message" id="item-error"></div>
+    </div>
+</body>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeItemInputSync(); // Assuming you have a sync function to keep the local and server DB in sync
+    fetchItemInputData(); // Trigger fetchItemInputData when the page is loaded
+    
+    fetchItemInputFromLocalDB().then((items) => {
+        const itemInputBody = document.getElementById('mock-item-input-body');
+        itemInputBody.innerHTML = ''; // Clear existing options
+
+        // Define the fixed mock item
+        const mockItem = {
+            item: '[item]',
+            input_description: '[input_description]',
+            additional_info_type: 'string', // Adjust based on your need
+            have_additional_info: true
+        };
+
+        // Add the fixed mock item first
+        const mockRadioInput = document.createElement('input');
+        mockRadioInput.type = 'radio';
+        mockRadioInput.name = 'item';
+        mockRadioInput.id = mockItem.item.replace(/\s+/g, '_'); // Replace spaces with underscores
+        mockRadioInput.value = mockItem.item;
+
+        const mockLabel = document.createElement('label');
+        mockLabel.setAttribute('for', mockRadioInput.id);
+        mockLabel.textContent = mockItem.item;
+
+        itemInputBody.appendChild(mockRadioInput);
+        itemInputBody.appendChild(mockLabel);
+
+        // Populate radio buttons from localDB items
+        items.forEach(item => {
+            const radioInput = document.createElement('input');
+            radioInput.type = 'radio';
+            radioInput.name = 'item';
+            radioInput.id = item.item.replace(/\s+/g, '_'); // Replace spaces with underscores
+            radioInput.value = item.item;
+
+            const label = document.createElement('label');
+            label.setAttribute('for', radioInput.id);
+            label.textContent = item.item;
+
+            itemInputBody.appendChild(radioInput);
+            itemInputBody.appendChild(label);
+        });
+
+        document.querySelectorAll('input[name="item"]').forEach((input) => {
+            input.addEventListener('change', (event) => {
+                const additionalInfoDiv = document.getElementById('additional-info');
+                additionalInfoDiv.innerHTML = ''; // Clear previous additional info
+
+                const selectedItem = items.find(item => item.item === event.target.value) || 
+                                     (event.target.value === mockItem.item ? mockItem : null);
+
+                if (selectedItem && selectedItem.have_additional_info) {
+                    let additionalInput;
+                    const description = selectedItem.input_description;
+                    const inputName = `${selectedItem.item}_additional`; // Consistent naming
+
+                    switch (selectedItem.additional_info_type) {
+                        case 'number':
+                            additionalInput = `<p>${description}: <input type="number" name="${inputName}" required></p>`;
+                            break;
+                        case 'string':
+                            additionalInput = `<p>${description}: <input type="text" name="${inputName}" required></p>`;
+                            break;
+                        case 'boolean':
+                            additionalInput = `<p>${description}: <input type="checkbox" name="${inputName}"></p>`;
+                            break;
+                        default:
+                            console.warn('Unsupported input type:', description);
+                    }
+
+                    if (additionalInput) {
+                        additionalInfoDiv.innerHTML = additionalInput;
+                    }
+                }
+            });
+        });
+    }).catch(error => {
+        console.error('Failed to load item inputs:', error);
+    });
+});
+
+
+// Fetch item_input data, first from local IndexedDB, and if it fails, from the server
+function fetchItemInputData() {
+    document.querySelector('.mdl-spinner').style.display = 'block';
+
+    // Try to get data from local IndexedDB
+    fetchItemInputFromLocalDB()
+    .then(data => {
+        if (data && data.length > 0) {
+            populateItemInputTable(data);
+        } else {
+            // If localDB is empty, fetch from server
+            fetchItemInputFromServer();
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching item input from local DB:', error);
+        // If localDB operation fails, fetch from server
+        fetchItemInputFromServer();
+    })
+    .finally(() => {
+        document.querySelector('.mdl-spinner').style.display = 'none';
+    });
+}
+
+
+// Populate the HTML table with item_input data
+function populateItemInputTable(data) {
+    const tbody = document.getElementById('item-input-body');
+    tbody.innerHTML = '';
+
+    if (Array.isArray(data) && data.length > 0) {
+        data.forEach(row => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${row.item}</td>
+                    <td>${row.have_additional_info}</td>
+                    <td>${row.additional_info_type || 'N/A'}</td>
+                    <td>${row.input_description || 'N/A'}</td>
+                </tr>
+            `;
+        });
+    } else {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 20px;">
+                    <span style="display: inline-block; width: 100%;">No results found</span>
+                </td>
+            </tr>`;
+    }
+}
+
+// Function to fetch user history from localDB as a fallback
+function fetchFromLocalDB(conditions = {}) {
+    return openIndexedDB()
+        .then(db => {
+            const transaction = db.transaction('actionHistory', 'readonly');
+            const store = transaction.objectStore('actionHistory');
+            
+            // Use the appropriate index based on conditions
+            let request;
+            if (conditions.id) {
+                const index = store.index('byId');
+                request = index.getAll(conditions.id);
+            } else {
+                request = store.getAll(); // Get all records if no specific condition is provided
+            }
+
+            return new Promise((resolve, reject) => {
+                request.onsuccess = function(event) {
+                    resolve(event.target.result);
+                };
+                request.onerror = function(event) {
+                    console.error('Error fetching from localDB:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        });
+}
+
+document.getElementById('delete-item-btn').addEventListener('click', async function() {
+    const itemName = prompt("Enter the item name to delete:");
+    if (!itemName) {
+        alert('Delete action canceled.');
+        return;
+    }
+
+    try {
+        // Fetch the entire itemInput table from IndexedDB
+        const items = await fetchItemInputFromLocalDB();
+        const itemToDelete = items.find(item => item.item === itemName);
+
+        if (itemToDelete) {
+            await removeItemByName(itemName);
+            alert('Item successfully removed!');
+            fetchItemInputData(); // Refresh item list (Implement this function as needed)
+        } else {
+            alert(`Item with name ${itemName} not found.`);
+        }
+    } catch (err) {
+        console.error("Error:", err);
+        alert('An error occurred while removing the item.');
+    }
+});
+
+document.getElementById('add-item-btn').addEventListener('click', async function() {
+    const itemName = prompt("Enter the item name:");
+    if (!itemName) {
+        alert('Add action canceled.');
+        return;
+    }
+
+    try {
+        // Check if the item already exists in the DB
+        const items = await fetchItemInputFromLocalDB();
+        const existingItem = items.find(item => item.item === itemName);
+
+        if (existingItem) {
+            alert(`Item with the name "${itemName}" already exists.`);
+            return;
+        }
+
+        const haveAdditionalInfoInput = prompt("Does the item need additional input? Enter 'no' for 0 or 'yes' for 1:");
+        if (!haveAdditionalInfoInput) {
+            alert('Add action canceled.');
+            return;
+        }
+
+        let haveAdditionalInfo, additionalInfoType, inputDescription;
+
+        if (haveAdditionalInfoInput.toLowerCase() === 'no') {
+            haveAdditionalInfo = 0;
+            additionalInfoType = null;
+            inputDescription = null;
+        } else if (haveAdditionalInfoInput.toLowerCase() === 'yes') {
+            haveAdditionalInfo = 1;
+
+            additionalInfoType = prompt("Enter the type of additional info (enter 'string' for word or 'boolean' for true/false or 'number'):");
+            if (!additionalInfoType || (additionalInfoType !== 'string' && additionalInfoType !== 'boolean' && additionalInfoType !== 'number')) {
+                alert('Invalid input for additional info type. Add action canceled.');
+                return;
+            }
+
+            inputDescription = prompt("Enter input description:");
+            if (!inputDescription) {
+                alert('Add action canceled.');
+                return;
+            }
+        } else {
+            alert('Invalid input for additional info. Add action canceled.');
+            return;
+        }
+
+        const item = {
+            item: itemName,
+            have_additional_info: haveAdditionalInfo,
+            additional_info_type: additionalInfoType,
+            input_description: inputDescription
+        };
+
+        await addItem(item);
+        alert('Item successfully added!');
+        fetchItemInputData(); // Refresh item list (Implement this function as needed)
+    } catch (err) {
+        console.error("Error:", err);
+        alert('An error occurred while adding the item.');
+    }
+});
+
+
+
+
+
+function writeToLocalBlacklist(blacklistEntry) {
+    return openBlacklistDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('blacklist', 'readwrite');
+            const store = transaction.objectStore('blacklist');
+
+            const request = store.put(blacklistEntry);
+
+            request.onsuccess = function(event) {
+                console.log('Entry added to local blacklist:', blacklistEntry);
+                resolve(event);
+            };
+
+            request.onerror = function(event) {
+                console.error('Error adding to local blacklist:', event.target.error);
+                reject(event.target.error);
+            };
+
+            transaction.oncomplete = function() {
+                console.log('Transaction completed: database modification finished.');
+            };
+
+            transaction.onerror = function(event) {
+                console.error('Transaction not opened due to error:', event.target.error);
+                reject(event.target.error);
+            };
+
+            transaction.onabort = function(event) {
+                console.error('Transaction aborted due to error:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    });
+}
+
+
+window.onload = initializeSync();
+      </script>
+     
+  </body>
+</html>

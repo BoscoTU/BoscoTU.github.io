@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Items</title>
+    
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.0/dist/pouchdb.min.js"></script>
+    <script src="sync_connection.js"></script>
+    <script src="item_input_connection.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .form-container {
+            width: 90%;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+        }
+
+        .form-container h1, .form-container h2, .form-container p {
+            margin-bottom: 10px;
+        }
+
+        .mdl-textfield {
+            width: 100%;
+        }
+
+        #additional-info {
+            margin-bottom: 20px;
+        }
+
+        .slider-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .slider-container input[type="radio"] {
+            display: none;
+        }
+
+        .slider-container label {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #f0f0f0;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: background-color 0.3s, border 0.3s;
+            border-radius: 5px;
+        }
+
+        .slider-container input[type="radio"]:checked + label {
+            background-color: #007bff;
+            color: white;
+            border: 2px solid #0056b3;
+        }
+
+        .slider-container label:hover {
+            background-color: #e0e0e0;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: Chartreuse;
+            color: black;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #a0d65e;
+        }
+
+        .button:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            filter: blur(1px);
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Return Items</h1>
+        <form id="return-form">
+            <p>Your ID no.</p>
+            <div class="mdl-textfield mdl-js-textfield">
+                <input class="mdl-textfield__input" type="number" id="id_no" name="id_no" required>
+                <label class="mdl-textfield__label" for="id_no">ID number...</label>
+            </div>
+            <div class="error-message" id="id-error"></div>
+            <p>Your Chinese name in English</p>
+            <div class="mdl-textfield mdl-js-textfield">
+                <input class="mdl-textfield__input" type="text" id="name" name="name" required>
+                <label class="mdl-textfield__label" for="name">Name...</label>
+            </div>
+            <div class="error-message" id="name-error"></div>
+            <p>Your Class</p>
+            <div class="mdl-textfield mdl-js-textfield">
+                <input class="mdl-textfield__input" type="text" id="class" name="class" required>
+                <label class="mdl-textfield__label" for="class">Class...</label>
+            </div>
+            <div class="error-message" id="class-error"></div>
+            <p>Your Class no.</p>
+            <div class="mdl-textfield mdl-js-textfield">
+                <input class="mdl-textfield__input" type="number" id="class_no" name="class_no" required>
+                <label class="mdl-textfield__label" for="class_no">Class no...</label>
+            </div>
+            <div class="error-message" id="classno-error"></div>
+
+            <h2>Select your items</h2>
+            <div class="slider-container" id="item-input-body">
+            </div>
+            <div id="additional-info"></div>
+            <div class="error-message" id="item-error"></div>
+
+            <h2>Select the current period</h2>
+            <div class="slider-container">
+                <input type="radio" name="period" id="recess" value="recess">
+                <label for="recess">Recess</label>
+                <input type="radio" name="period" id="lunchtime" value="lunchtime">
+                <label for="lunchtime">Lunchtime</label>
+                <input type="radio" name="period" id="afterschool" value="afterschool">
+                <label for="afterschool">Afterschool</label>
+                <input type="radio" name="period" id="other" value="other">
+                <label for="other">Other</label>
+            </div>
+            <div class="error-message" id="period-error"></div>
+            <p id="message"></p>
+            <div class="button-container">
+                <button type="button" id="confirm-btn" class="button" disabled>Confirm</button>
+                <a href="index.html" class="button">Return</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let borrowData;
+        document.addEventListener('DOMContentLoaded', function () {
+            const confirmButton = document.getElementById('confirm-btn');
+            console.log('Initial button state:', confirmButton.disabled);
+        if (confirmButton) {
+            console.log('Button found:', confirmButton);
+        } else {
+            console.error('Confirm button not found in the DOM');
+        }
+
+        initializeItemInputSync();
+        //item related
+        fetchItemInputFromLocalDB().then((items) => {
+                const itemInputBody = document.getElementById('item-input-body');
+                itemInputBody.innerHTML = ''; // Clear existing options
+
+                // Populate radio buttons
+                items.forEach(item => {
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.name = 'item';
+                    radioInput.id = item.item.replace(/\s+/g, '_'); // Replace spaces with underscores
+                    radioInput.value = item.item;
+
+                    const label = document.createElement('label');
+                    label.setAttribute('for', radioInput.id);
+                    label.textContent = item.item;
+
+                    itemInputBody.appendChild(radioInput);
+                    itemInputBody.appendChild(label);
+                });
+
+                document.querySelectorAll('input[name="item"]').forEach((input) => {
+            input.addEventListener('change', (event) => {
+                const additionalInfoDiv = document.getElementById('additional-info');
+                additionalInfoDiv.innerHTML = ''; // Clear previous additional info
+
+                const selectedItem = items.find(item => item.item === event.target.value);
+                if (selectedItem && selectedItem.have_additional_info) {
+                    let additionalInput;
+                    const description = selectedItem.input_description;
+                    const inputName = `${selectedItem.item}_additional`; // Consistent naming
+
+                    switch (selectedItem.additional_info_type) {
+                        case 'number':
+                            additionalInput = `<p>${description}: <input type="number" name="${inputName}" required></p>`;
+                            break;
+                        case 'string':
+                            additionalInput = `<p>${description}: <input type="text" name="${inputName}" required></p>`;
+                            break;
+                        case 'boolean':
+                            additionalInput = `<p>${description}: <input type="checkbox" name="${inputName}"></p>`;
+                            break;
+                        default:
+                            console.warn('Unsupported input type:', description);
+                    }
+
+                    if (additionalInput) {
+                        additionalInfoDiv.innerHTML = additionalInput;
+                    }
+                }
+                updateReturnButtonState()
+            });
+        });
+    }).catch(error => {
+        console.error('Failed to load item inputs:', error);
+    });
+        });
+
+
+            document.querySelectorAll('input[name="period"]').forEach((input) => {
+                input.addEventListener('change', updateReturnButtonState);
+            });
+    
+            document.getElementById('id_no').addEventListener('input', updateReturnButtonState);
+
+    
+            async function validateReturnID() {
+    const idInput = document.getElementById('id_no').value;
+    const errorDiv = document.getElementById('id-error');
+
+    try {
+        const canBorrowObject = await get_detail(idInput, 'can_borrow');
+        console.log('canBorrowObj:', canBorrowObject);
+
+        // Check if the response object is valid and contains the necessary property
+        if (canBorrowObject !== null && typeof canBorrowObject === 'object' && canBorrowObject.hasOwnProperty('can_borrow')) {
+            const canBorrowValue = canBorrowObject.can_borrow;
+            console.log('canBorrowValue:', canBorrowValue);
+
+            // Handle numeric and string values for canBorrowValue
+            const canBorrow = (canBorrowValue === 1 || canBorrowValue === '1');
+
+            if (canBorrow) {
+                errorDiv.textContent = 'You have not borrowed any items yet';
+                return false;
+            } else {
+                errorDiv.textContent = '';
+                return true;
+            }
+        } else {
+            // If can_borrow property is not found, treat it as an error
+            errorDiv.textContent = 'You have not borrowed any items yet';
+            return false;
+        }
+    } catch (err) {
+        console.error("Caught error:", err); // Log the full error object for debugging
+
+        // Handle specific error messages returned by the server
+        if (err.message && err.message.includes('User or type not found')) {
+            errorDiv.textContent = 'User ID not found. You have not borrowed any items yet';
+            return false;
+        } else {
+            errorDiv.textContent = 'Error validating user ID';
+            console.error("Error:", err);
+            return false;
+        }
+    }
+}
+
+
+async function updateReturnButtonState() {
+    console.log("try to check");
+    const idValid = document.getElementById('id_no').value.trim() !== '';
+    const nameValid = document.getElementById('name').value.trim() !== '';
+    const classValid = document.getElementById('class').value.trim() !== '';
+    const classNoValid = document.getElementById('class_no').value.trim() !== '';
+    const itemSelected = Array.from(document.querySelectorAll('input[name="item"]')).some(r => r.checked);
+    const periodSelected = Array.from(document.querySelectorAll('input[name="period"]')).some(r => r.checked);
+    const selectedItem = document.querySelector('input[name="item"]:checked').value;
+    const selectedPeriod = document.querySelector('input[name="period"]:checked').value;
+
+    let additionalDataValid = true;
+    const selectedRadio = document.querySelector('input[name="item"]:checked');
+if (selectedRadio) {
+    const selectedItem = selectedRadio.value;
+    console.log('Selected item:', selectedItem);
+} else {
+    console.log('No item selected');
+}
+
+
+
+    const idInput = document.getElementById('id_no').value;
+    const returnValid = await validateReturnID();
+
+    const dateOnly = new Date().toISOString().split('T')[0];
+    const returnItem = selectedItem;
+    const returnPeriod = selectedPeriod;
+
+    let returnItemValid = false;
+    let returnPeriodValid = false;
+    let additionalInfoValid = false;
+    let dateValid = false;
+
+    try {
+        const BorrowItemObject = await get_detail(idInput, 'item_dealt_with');
+        console.log('BorrowItem:', BorrowItemObject); 
+        const BorrowItem = BorrowItemObject.item_dealt_with;
+        returnItemValid = returnItem === BorrowItem;
+        console.log('returnItemValid:', returnItemValid);
+    } catch (err) {
+        console.error('Error validating return item:', err.message);
+    }
+
+    try {
+        const BorrowPeriodObject = await get_detail(idInput, 'period');
+        console.log('BorrowPeriod:', BorrowPeriodObject); 
+        const BorrowPeriod = BorrowPeriodObject.period;
+        console.log('gotBorrowPeriod',BorrowPeriod)
+        returnPeriodValid = returnPeriod === BorrowPeriod;
+        console.log('returnPeriod',returnPeriod)
+        console.log('returnPeriodValid:', returnPeriodValid);
+    } catch (err) {
+        console.error('Error validating return period:', err.message);
+    }
+
+    try {
+        
+    // Fetch additional information from local DB
+    const BorrowAdditionalInfoObject = await get_detail(idInput, 'additional_information');
+
+    if (BorrowAdditionalInfoObject && BorrowAdditionalInfoObject.additional_information !== undefined) {
+        const BorrowAdditionalInfo = BorrowAdditionalInfoObject.additional_information;
+        console.log("BorrowAdditionalInfoEX:", BorrowAdditionalInfo);
+
+        // Fetch item data and gather form additional info
+        fetchItemInputFromLocalDB()
+            .then((items) => {
+                console.log('Fetched items from local DB:', items);
+
+                const selectedItemData = items.find(item => item.item === selectedItem);
+                console.log('Selected item:', selectedItemData);
+                let additionalInfo = '';
+
+                if (selectedItemData && selectedItemData.have_additional_info) {
+                    console.log('Selected item has additional info:', selectedItemData);
+
+                    const inputName = `${selectedItemData.item}_additional`;
+                    const inputDescription = selectedItemData.input_description;
+                    
+
+                    switch (selectedItemData.additional_info_type) {
+                        case 'number':
+                        case 'string':
+                            additionalInfo = `${inputDescription}: ${document.querySelector(`input[name="${inputName}"]`).value}`;
+                            console.log('Collected additional info (number/string):', additionalInfo);
+                            break;
+                        case 'boolean':
+                            additionalInfo = `${inputDescription}: ${document.querySelector(`input[name="${inputName}"]`).checked}`;
+                            console.log('Collected additional info (boolean):', additionalInfo);
+                            break;
+                        default:
+                            console.warn('Unsupported input type:', selectedItemData.additional_info_type);
+                    }
+                } else {
+                    console.log('No additional info required for this item.');
+                }
+                console.log('formAdditionalInfo',additionalInfo)
+                    additionalInfoValid= additionalInfo===BorrowAdditionalInfo;
+                    console.log("additionalInfoValid",additionalInfoValid)
+            })
+            .catch(error => {
+                console.error('Error fetching item input from local DB:', error);
+            });
+    }
+} catch (err) {
+    console.error('Error validating additional information:', err.message);
+}
+
+
+
+
+    try {
+        const BorrowDateObject = await get_detail(idInput, 'date');
+        console.log('BorrowDate:', BorrowDateObject); 
+        const BorrowDate = BorrowDateObject.date;
+        dateValid = dateOnly === BorrowDate;
+        console.log('dateValid:', dateValid);
+    } catch (err) {
+        console.error('Error validating date:', err.message);
+    }
+
+    const confirmBtn = document.getElementById('confirm-btn');
+    confirmBtn.disabled = !(idValid && nameValid && classValid && classNoValid && itemSelected && periodSelected && returnItemValid && returnPeriodValid && additionalInfoValid && dateValid);
+    console.log('cannot confirm',confirmBtn.disabled);
+}
+
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('confirm-btn').addEventListener('click', async function () {
+    console.log('Confirm button clicked, state:', this.disabled);
+    if (!this.disabled) {
+        console.log('Button is enabled');
+        const idInput = document.getElementById('id_no').value;
+        const name = document.getElementById('name').value;
+        const classInput = document.getElementById('class').value;
+        const classNo = document.getElementById('class_no').value;
+        const selectedItem = document.querySelector('input[name="item"]:checked').value;
+        const period = document.querySelector('input[name="period"]:checked').value;
+        let additionalInfo = '';
+
+        console.log('Starting to fetch item input from local DB...');
+        fetchItemInputFromLocalDB().then((items) => {
+            console.log('Fetched items from local DB:', items);
+            const selectedItemData = items.find(item => item.item === selectedItem);
+
+            if (selectedItemData && selectedItemData.have_additional_info) {
+                console.log('Selected item has additional info:', selectedItemData);
+                const inputName = `${selectedItemData.item}_additional`;
+                const inputDescription = selectedItemData.input_description;
+
+                switch (selectedItemData.additional_info_type) {
+                    case 'number':
+                    case 'string':
+                        additionalInfo = `${inputDescription}: ${document.querySelector(`input[name="${inputName}"]`).value}`;
+                        console.log('Collected additional info (number/string):', additionalInfo);
+                        break;
+                    case 'boolean':
+                        additionalInfo = `${inputDescription}: ${document.querySelector(`input[name="${inputName}"]`).checked}`;
+                        console.log('Collected additional info (boolean):', additionalInfo);
+                        break;
+                    default:
+                        console.warn('Unsupported input type:', selectedItemData.additional_info_type);
+                }
+            } else {
+                console.log('No additional info required for this item.');
+            }
+        }).catch(error => {
+            console.error('Error fetching item input from local DB:', error);
+        }).finally(() => {
+            const borrowData = {
+                timestamp: new Date().toISOString(),
+                action: 'return',
+                id: idInput,
+                can_borrow: '1', // Assuming the user cannot borrow if this is fixed, change logic as needed
+                name: name,
+                class: classInput,
+                'class number': classNo,
+                date: new Date().toISOString().split('T')[0],
+                period: period,
+                'item dealt with': selectedItem,
+                additional_information: additionalInfo
+            };
+
+            console.log('Return data being sent to server:', borrowData);
+            sendBorrowDataToServer(borrowData)
+                .then(response => {
+                    alert('Return confirmation successful!');
+                    console.log('Return data sent successfully:', borrowData);
+                    window.location.href = 'index.html';
+                })
+                .catch(err => {
+                    console.error("Error sending borrow data to server:", err);
+                    alert('Error recording return action. Please try again.');
+                });
+        });
+    }})
+});
+window.onload = initializeSync();
+    </script>
+    
+</body>
+</html>

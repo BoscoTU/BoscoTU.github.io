@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User History</title>
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.0/dist/pouchdb.min.js"></script>
+
+    <script src="sync_connection.js"></script>
+    <script src="black_list_connection.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+
+
+      .container {
+        width: 100%;
+        max-width: 1300px;
+        margin: 50px auto;
+        padding: 20px;
+        border-radius: 10px;
+        background-color: #ffffff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+      }
+
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        min-width: 700px;
+      }
+
+
+      table,
+      th,
+      td {
+        border: 0.5px solid #ccc;
+      }
+
+
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+      }
+
+
+      th {
+        background-color: #f5f5f5;
+      }
+
+
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+
+      .mdl-spinner {
+        display: none;
+        margin: auto;
+      }
+
+
+      @media screen and (max-width: 1024px) {
+        .container {
+          padding: 10px;
+        }
+
+
+        table {
+          min-width: 600px;
+        }
+
+
+        th,
+        td {
+          padding: 8px;
+          font-size: 14px;
+        }
+      }
+
+
+/* Styles for the buttons */
+.button-container {
+  display: flex;
+  justify-content: center; /* Center the buttons */
+  gap: 30px; /* Space between buttons */
+  margin-top: 20px;
+}
+
+
+.button {
+  padding: 10px 10px; /* Adjust padding to make buttons narrower */
+  color: black;
+  text-decoration: none;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  text-align: center;
+  flex: 1;
+  margin: 0 5px; /* Symmetrical margins */
+}
+
+
+#restore-btn {
+  background-color: lightgreen;
+}
+
+
+#restore-btn:hover {
+  background-color: #9acd32;
+}
+
+
+#search-btn {
+  background-color: skyblue;
+}
+
+
+#search-btn:hover {
+  background-color: #4a90e2;
+}
+
+
+#reset-btn {
+  background-color: lightgrey;
+  color: black;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+#reset-btn:hover {
+  background-color: grey;
+  color: white;
+}
+
+
+#management {
+  background-color: coral;
+  color: black;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+#management:hover {
+  background-color: #e5534b;
+  color: white;
+}
+
+
+
+
+      .search-container {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        background-color: #f9f9f9;
+      }
+
+
+      .search-header {
+        padding: 10px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        text-align: center;
+        font-size: 16px;
+        border-radius: 5px 5px 0 0;
+      }
+
+
+      .search-content {
+        display: none;
+        padding: 20px;
+      }
+
+
+      .condition-field,
+      .checkbox-container {
+        margin-bottom: 20px;
+      }
+
+
+      .search-options {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+      }
+
+
+      .search-options input[type="radio"] {
+        display: none;
+      }
+
+
+      .search-options label {
+        padding: 10px 20px;
+        background-color: #f0f0f0;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.3s, border 0.3s;
+        border-radius: 5px;
+      }
+
+
+      .search-options input[type="radio"]:checked+label {
+        background-color: #007bff;
+        color: white;
+        border: 2px solid #0056b3;
+      }
+
+
+      .search-options label:hover {
+        background-color: #e0e0e0;
+      }
+
+
+      input[type="date"] {
+        color: black;
+        background-color: transparent;
+        border: none;
+        font-size: 16px;
+        padding: 10px;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        position: relative;
+      }
+
+
+      input[type="date"]::-webkit-datetime-edit {
+        color: black;
+        opacity: 1;
+      }
+
+
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        color: black;
+        opacity: 1;
+        cursor: pointer;
+      }
+
+
+      input[type="date"]::-webkit-clear-button,
+      input[type="date"]::-webkit-inner-spin-button {
+        display: none;
+      }
+      #deleteAllButton {
+  display: block;
+  margin: 20px auto;
+  background-color: red;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#deleteAllButton:hover {
+  background-color: darkred;
+}
+
+#confirmationDialog {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+#confirmationDialog p {
+  margin-bottom: 20px;
+  color: black;
+}
+
+#confirmationDialog input[type="text"] {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  width: calc(100% - 12px);
+}
+
+#confirmationDialog button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#confirmYes {
+  background-color: green;
+  color: white;
+}
+
+#confirmYes:hover {
+  background-color: darkgreen;
+}
+
+#confirmNo {
+  background-color: grey;
+  color: white;
+}
+
+#confirmNo:hover {
+  background-color: darkgrey;
+}
+
+#overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+/* Add this CSS to center the text in the table row */
+#user-history-body td {
+    text-align: center; /* Center text horizontally */
+    vertical-align: middle; /* Center text vertically */
+    padding: 20px 0; /* Optional: Add some padding for better appearance */
+}
+/* Add this CSS to center the text in the "No results found" message */
+.no-results {
+    text-align: center;
+    vertical-align: middle;
+    padding: 20px 0;
+}
+#blackListButton {
+    background-color: lightgray;
+    color: black; /* Text color */
+    transition: background-color 0.3s; /* Smooth transition */
+}
+
+#blackListButton:hover {
+    background-color: gray;
+    color: black; /* Optional: change text color on hover */
+}
+
+    </style>
+  </head>
+  <body>
+    <div class="container mdl-shadow--2dp">
+      <h1>User History</h1>
+      <!-- Restore and Return Buttons -->
+      <div class="button-container">
+        <a class="button" id="restore-btn">Restore</a>
+        <a id="blackListButton" class="button">Black list</a>
+        <a href="setting.html" class="button" id="management">Return</a>
+      </div>
+
+
+      <!-- Collapsible Search Form -->
+      <div class="search-container">
+        <div class="search-header" onclick="toggleSearchContent()">Search Options</div>
+        <div class="search-content">
+          <div class="search-options">
+            <input type="radio" id="search-id" name="search-option" value="id" onclick="showConditionInput('id-input')" checked>
+            <label for="search-id">Search by ID</label>
+            <input type="radio" id="search-date" name="search-option" value="date" onclick="showConditionInput('date-input')">
+            <label for="search-date">Search by Date</label>
+            <input type="radio" id="search-canborrow" name="search-option" value="can_borrow" onclick="showConditionInput('canborrow-input')">
+            <label for="search-canborrow">Search by Can Borrow</label>
+          </div>
+          <div id="id-input" class="condition-field">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="text" id="condition-value">
+              <label class="mdl-textfield__label" for="condition-value">Enter ID...</label>
+            </div>
+          </div>
+          <div id="date-input" class="condition-field">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="date" id="date-value">
+              <label class="mdl-textfield__label" for="date-value"></label>
+            </div>
+          </div>
+          <div id="canborrow-input" class="checkbox-container">
+            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="can-borrow">
+              <input type="checkbox" id="can-borrow" class="mdl-checkbox__input">
+              <span class="mdl-checkbox__label">Can Borrow</span>
+            </label>
+            <!-- Add the checkbox in the HTML form -->
+<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="recentResultsOnly">
+      <input type="checkbox" id="recentResultsOnly" class="mdl-checkbox__input">
+      <span class="mdl-checkbox__label">Show Only Most Recent Results</span>
+    </label>
+  </div>
+ 
+          </div>
+          <!-- Search and Reset Buttons -->
+          <div class="button-container">
+            <button class="button" id="reset-btn">Reset</button>
+            <button class="button" id="search-btn">Search</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Loading Spinner -->
+      <div class="mdl-spinner mdl-js-spinner is-active"></div>
+
+
+      <!-- User History Table -->
+      <div class="table-responsive">
+        <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>ID</th>
+              <th>Can Borrow</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Class Number</th>
+              <th>Date</th>
+              <th>Period</th>
+              <th>Item Dealt With</th>
+              <th>Additional Information</th>
+            </tr>
+          </thead>
+          <tbody id="user-history-body">
+            <td colspan="11" class="no-results">No results found</td>
+          </tbody>
+        </table>
+      </div>
+    </div>
+<!-- Delete All Button -->
+<button id="deleteAllButton">Delete All Records</button>
+<!-- Confirmation Dialog -->
+<div id="overlay"></div>
+<div id="confirmationDialog">
+  <p>Are you sure you want to delete all records? Please enter '1+1=3' to confirm:</p>
+  <input type="text" id="verificationInput">
+  <br>
+  <button id="confirmYes">Delete All</button>
+  <button id="confirmNo">Cancel</button>
+</div>
+
+    <script>
+        function showConditionInput(inputId) {
+          const fields = document.querySelectorAll('.condition-field, .checkbox-container');
+          fields.forEach(field => field.style.display = 'none');
+          document.getElementById(inputId).style.display = 'block';
+        }
+     
+        document.getElementById('search-btn').addEventListener('click', () => {
+    const searchOption = document.querySelector('input[name="search-option"]:checked').value;
+    let searchValue = document.getElementById('condition-value').value;
+    const dateValue = document.getElementById('date-value').value;
+    const canBorrow = document.getElementById('can-borrow').checked ? 1 : 0;
+    const recentResultsOnly = document.getElementById('recentResultsOnly').checked ? 1 : 0;
+ 
+    if (searchOption === 'date') {
+        searchValue = dateValue;
+    }
+ 
+    const conditions = {};
+    if (searchOption === 'can_borrow') {
+        conditions['can_borrow'] = canBorrow;
+        conditions['recentResultsOnly'] = recentResultsOnly;
+    } else {
+        conditions[searchOption.toLowerCase()] = searchValue;
+    }
+ 
+    console.log("Conditions being sent:", conditions);
+    fetchUserHistory(conditions);
+});
+
+
+// Modified fetchUserHistory to use localDB if server connection fails
+function fetchUserHistory(conditions = {}) {
+    // Show loading spinner
+    document.querySelector('.mdl-spinner').style.display = 'block';
+
+    fetch('search_user.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(conditions)
+    })
+    .then(response => response.json())
+    .then(data => {
+        populateUserHistory(data);
+    })
+    .catch(error => {
+        console.error('Error fetching user history from server:', error);
+        // Use localDB as a fallback
+        fetchFromLocalDB(conditions)
+            .then(localData => {
+                if (localData && localData.length > 0) {
+                    populateUserHistory(localData);
+                } else {
+                    const tbody = document.getElementById('user-history-body');
+                    tbody.innerHTML = '<tr><td colspan="11">No results found</td></tr>';
+                }
+            })
+            .catch(localError => {
+                console.error('Error fetching user history from localDB:', localError);
+                const tbody = document.getElementById('user-history-body');
+                tbody.innerHTML = '<tr><td colspan="11">An error occurred while fetching the data.</td></tr>';
+            });
+    })
+    .finally(() => {
+        // Hide loading spinner
+        document.querySelector('.mdl-spinner').style.display = 'none';
+    });
+}
+
+function populateUserHistory(data) {
+    const tbody = document.getElementById('user-history-body');
+    tbody.innerHTML = '';
+
+    if (Array.isArray(data) && data.length > 0) {
+        data.forEach(row => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${row.timestamp}</td>
+                    <td>${row.action}</td>
+                    <td>${row.id}</td>
+                    <td>${row.can_borrow}</td>
+                    <td>${row.name}</td>
+                    <td>${row.class}</td>
+                    <td>${row.class_number}</td>
+                    <td>${row.date}</td>
+                    <td>${row.period}</td>
+                    <td>${row.item_dealt_with}</td>
+                    <td>${row.additional_information}</td>
+                </tr>
+            `;
+        });
+    } else {
+      tbody.innerHTML = `
+    <tr>
+        <td style="text-align: center; padding: 20px;">
+            <span style="display: inline-block; width: 100%;">No results found</span>
+        </td>
+    </tr>`;
+
+
+
+
+    }
+}
+
+// Function to fetch user history from localDB as a fallback
+function fetchFromLocalDB(conditions = {}) {
+    return openIndexedDB()
+        .then(db => {
+            const transaction = db.transaction('actionHistory', 'readonly');
+            const store = transaction.objectStore('actionHistory');
+            
+            // Use the appropriate index based on conditions
+            let request;
+            if (conditions.id) {
+                const index = store.index('byId');
+                request = index.getAll(conditions.id);
+            } else {
+                request = store.getAll(); // Get all records if no specific condition is provided
+            }
+
+            return new Promise((resolve, reject) => {
+                request.onsuccess = function(event) {
+                    resolve(event.target.result);
+                };
+                request.onerror = function(event) {
+                    console.error('Error fetching from localDB:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        });
+}
+     
+        document.getElementById('reset-btn').addEventListener('click', () => {
+          document.querySelectorAll('input[type="text"], input[type="date"]').forEach(input => input.value = '');
+          document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.checked = false);
+          fetchUserHistory(); // Load the entire history again
+        });
+     
+        document.addEventListener('DOMContentLoaded', () => {
+          document.getElementById('search-id').checked = true;
+          showConditionInput('id-input');
+          fetchUserHistory(); // Load entire history on page load
+        });
+     
+        function toggleSearchContent() {
+          const content = document.querySelector('.search-content');
+          content.style.display = content.style.display === 'none' || content.style.display === '' ? 'block' : 'none';
+        }
+
+
+        function toggleCollapse(id) {
+  const content = document.getElementById(id);
+  content.style.display = content.style.display === 'none' ? 'block' : 'none';
+}
+// Confirmation Dialog Elements
+const deleteAllButton = document.getElementById('deleteAllButton');
+const overlay = document.getElementById('overlay');
+const confirmationDialog = document.getElementById('confirmationDialog');
+const confirmYes = document.getElementById('confirmYes');
+const confirmNo = document.getElementById('confirmNo');
+const verificationInput = document.getElementById('verificationInput');
+
+// Function to show the confirmation dialog
+function showConfirmationDialog() {
+    overlay.style.display = 'block';
+    confirmationDialog.style.display = 'block';
+}
+
+// Function to hide the confirmation dialog and unfocus any input
+function hideConfirmationDialog() {
+    overlay.style.display = 'none';
+    confirmationDialog.style.display = 'none';
+    verificationInput.value = ''; // Clear input
+    verificationInput.blur(); // Unfocus input
+}
+
+// Event listener for "Delete All" button
+deleteAllButton.addEventListener('click', showConfirmationDialog);
+
+// Event listener for "Yes" button in the confirmation dialog
+confirmYes.addEventListener('click', function() {
+    const input = verificationInput.value;
+    if (input === "1+1=3") {
+        console.log('Confirmed deletion of all data.');
+        // Perform the delete operation here (e.g., send a request to delete all records)
+        fetch('delete_all_user_history.php', {
+            method: 'POST'
+        })
+        .then(response => response.text())
+        .then(data => {
+            console.log('Deletion response:', data);
+            alert('All records have been deleted.');
+            hideConfirmationDialog();
+            fetchUserHistory();  // Refresh the history table
+        })
+        .catch(error => {
+            console.error('Error deleting records:', error);
+            alert('An error occurred while deleting the records.');
+        });
+    } else {
+        console.log('Incorrect confirmation input.');
+        alert('Incorrect input. Please try again.');
+    }
+});
+
+// Event listener for "Cancel" button in the confirmation dialog
+confirmNo.addEventListener('click', hideConfirmationDialog);
+
+//restore btn
+document.getElementById('restore-btn').addEventListener('click', async function() {
+    const idInput = prompt("Enter the ID to restore:");
+    if (!idInput) {
+        alert('Restore action canceled.');
+        return;
+    }
+
+    try {
+        // Check the `can_borrow` state of the provided ID
+        const canBorrowState = await get_detail(idInput, 'can_borrow');
+        console.log("canborrowstate",canBorrowState)
+        // Check if the server returned an error
+        if (canBorrowState.error) {
+            console.error(`Server returned error: ${canBorrowState.error}`);
+            alert(`User with ID ${idInput} not found or ${canBorrowState.error}.`);
+            return;
+        }
+
+        // Check if the user is already eligible to borrow
+        if (canBorrowState.can_borrow !== '0') {
+            alert(`User with ID ${idInput} is already eligible to borrow items.`);
+            return;
+        }
+
+        // Fetch the necessary details from the local database or ask the user to input them
+        const name = prompt("Enter the name:");
+        const classInput = prompt("Enter the class:");
+        const classNo = prompt("Enter the class number:");
+
+        // Build the data object to restore the user's ability to borrow
+        const restoreData = {
+            timestamp: new Date().toISOString(),
+            action: 'restore',
+            id: idInput,
+            can_borrow: '1',
+            name: name,
+            class: classInput,
+            'class number': classNo,
+            date: new Date().toISOString().split('T')[0],
+            period: null,
+            'item dealt with': null,
+            additional_information: null
+        };
+
+        console.log('Restore Data:', restoreData);
+
+        // Then, sync with the server (this is also handled inside `writeHistoryToLocalDB`)
+        await sendBorrowDataToServer(restoreData);
+
+        // If everything is successful, confirm the action
+        alert('Restore action successful!');
+        console.log('Restore data sent:', restoreData);
+        fetchUserHistory()
+
+        // Optionally, refresh the page or navigate to another page
+    } catch (err) {
+        console.error("Error:", err);
+        alert(`User with ID ${idInput} is already eligible to borrow items.`);
+    }
+});
+
+document.getElementById('blackListButton').addEventListener('click', async function() {
+    const idInput = prompt("Enter the ID to blacklist:");
+    if (!idInput) {
+        alert('Blacklist action canceled.');
+        return;
+    }
+
+    try {
+        // Check the `can_borrow` state of the provided ID
+        const canBorrowState = await get_detail(idInput, 'can_borrow');
+
+        // If the user's most recent history has `can_borrow = 0`
+        if (canBorrowState && canBorrowState.can_borrow === '0') {
+            const name = prompt("Enter the name:");
+            if (!name) {
+                alert('Blacklist action canceled.');
+                return;
+            }
+
+            const classInput = prompt("Enter the class:");
+            if (!classInput) {
+                alert('Blacklist action canceled.');
+                return;
+            }
+
+            const classNo = prompt("Enter the class number:");
+            if (!classNo) {
+                alert('Blacklist action canceled.');
+                return;
+            }
+
+            // Build the blacklist data object
+            const blacklistEntry = {
+                id: idInput,
+                name: name,
+                class: classInput,
+                class_number: parseInt(classNo)
+            };
+
+            // Write to the local blacklist
+            await writeToLocalBlacklist(blacklistEntry);
+
+            await sendBlacklistDataToServer(blacklistEntry, method = 'add')
+
+            alert('User successfully added to blacklist.');
+        } else {
+            alert(`User with ID ${idInput} is not eligible for blacklisting.`);
+        }
+    } catch (err) {
+        console.error("Error:", err);
+        alert('An error occurred during the blacklisting process.');
+    }
+});
+
+
+
+window.onload = initializeSync();
+      </script>
+     
+  </body>
+</html>
