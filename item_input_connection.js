@@ -128,16 +128,30 @@ function fetchItemInputFromServer() {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         // Update local IndexedDB with the latest data from the server
         updateLocalItemInputDB(data);
         populateItemInputTable(data);
     })
     .catch(error => {
-        console.error('Error fetching item input from server:', error);
+        console.error('Error fetching item input from server, falling back to local DB:', error);
+        
+        // Fall back to local DB if the server request fails
+        fetchItemInputFromLocalDB().then(localData => {
+            console.log('Fetched item input from local DB:', localData);
+            populateItemInputTable(localData);
+        }).catch(localError => {
+            console.error('Error fetching item input from local DB:', localError);
+        });
     });
 }
+
 
 // Update local IndexedDB with data from the server
 function updateLocalItemInputDB(data) {
