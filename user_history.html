@@ -654,31 +654,52 @@ function hideConfirmationDialog() {
 // Event listener for "Delete All" button
 deleteAllButton.addEventListener('click', showConfirmationDialog);
 
-// Event listener for "Yes" button in the confirmation dialog
 confirmYes.addEventListener('click', function() {
     const input = verificationInput.value;
     if (input === "1+1=3") {
         console.log('Confirmed deletion of all data.');
-        // Perform the delete operation here (e.g., send a request to delete all records)
+
+        // Attempt to delete all records from the server
         fetch('delete_all_user_history.php', {
             method: 'POST'
         })
         .then(response => response.text())
         .then(data => {
-            console.log('Deletion response:', data);
-            alert('All records have been deleted.');
+            console.log('Server deletion response:', data);
+            alert('All records have been deleted from the server.');
             hideConfirmationDialog();
             fetchUserHistory();  // Refresh the history table
         })
         .catch(error => {
-            console.error('Error deleting records:', error);
-            alert('An error occurred while deleting the records.');
+            console.error('Error deleting records on the server:', error);
+            // If server deletion fails, delete all data in local IndexedDB
+            openIndexedDB().then(db => {
+                const transaction = db.transaction(['actionHistoryDB'], 'readwrite');
+                const store = transaction.objectStore('actionHistoryDB');
+                const clearRequest = store.clear();
+
+                clearRequest.onsuccess = () => {
+                    console.log('Local actionHistoryDB data cleared successfully.');
+                    alert('Server deletion failed, but local data has been cleared.');
+                    hideConfirmationDialog();
+                    fetchUserHistory();  // Refresh the history table
+                };
+
+                clearRequest.onerror = (event) => {
+                    console.error('Error clearing local actionHistoryDB data:', event.target.error);
+                    alert('An error occurred while clearing local data.');
+                };
+            }).catch(dbError => {
+                console.error('Error opening local DB:', dbError);
+                alert('An error occurred while opening the local database.');
+            });
         });
     } else {
         console.log('Incorrect confirmation input.');
         alert('Incorrect input. Please try again.');
     }
 });
+
 
 // Event listener for "Cancel" button in the confirmation dialog
 confirmNo.addEventListener('click', hideConfirmationDialog);
@@ -787,7 +808,7 @@ document.getElementById('blackListButton').addEventListener('click', async funct
             // Write to the local blacklist
             await writeToLocalBlacklist(blacklistEntry);
 
-            await sendBlacklistDataToServer(blacklistEntry, method = 'add')
+           // await sendBlacklistDataToServer(blacklistEntry, method = 'add')
 
             alert('User successfully added to blacklist.');
         } else {
@@ -801,7 +822,7 @@ document.getElementById('blackListButton').addEventListener('click', async funct
 
 
 
-window.onload = initializeSync();
+//window.onload = initializeSync();
       </script>
      
   </body>

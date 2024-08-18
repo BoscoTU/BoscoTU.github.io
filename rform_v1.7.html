@@ -172,7 +172,7 @@
             console.error('Confirm button not found in the DOM');
         }
 
-        initializeItemInputSync();
+        //initializeItemInputSync();
         //item related
         fetchItemInputFromLocalDB().then((items) => {
                 const itemInputBody = document.getElementById('item-input-body');
@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }})
 });
-window.onload = initializeSync();
+//window.onload = initializeSync();
     </script>
     
 </body>

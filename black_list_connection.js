@@ -35,75 +35,12 @@ function openBlacklistDB() {
 
 function initializeBlacklistSync() {
     const blacklistDBName = 'blacklist';
-    syncBlacklistFromServerToLocal(blacklistDBName).catch(error => {
+    //syncBlacklistFromServerToLocal(blacklistDBName).catch(error => {
         console.error('Error initializing blacklist sync:', error);
-    });
-}
+    };
 
-function syncBlacklistFromServerToLocal(dbName) {
-    console.log("Starting syncBlacklistFromServerToLocal with database:", dbName);
 
-    return fetch('handle_all_blacklist.php', {
-        method: 'GET', // Sending a GET request to retrieve blacklist data
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log("Blacklist server data received:", data);
 
-        if (Array.isArray(data) && data.length > 0) {
-            console.log("Blacklist data is an array and contains elements.");
-
-            // Delete the old database
-            console.log("Deleting old blacklist database...");
-            return deleteOldBlacklistDatabase(dbName)
-                .then(() => {
-                    console.log("Old blacklist database deleted. Opening new IndexedDB instance...");
-                    return openBlacklistDB(dbName);
-                })
-                .then(db => {
-                    console.log("New blacklist IndexedDB instance opened:", db);
-
-                    const transaction = db.transaction('blacklist', 'readwrite');
-                    const store = transaction.objectStore('blacklist');
-
-                    data.forEach(doc => {
-                        try {
-                            store.put(doc);
-                            console.log("Stored blacklist document:", doc);
-                        } catch (error) {
-                            console.error('Error adding blacklist document to store:', error);
-                        }
-                    });
-
-                    return new Promise((resolve, reject) => {
-                        transaction.oncomplete = () => {
-                            console.log("Blacklist transaction complete. All records stored.");
-                            resolve();
-                        };
-
-                        transaction.onerror = function(event) {
-                            console.error('Blacklist transaction error:', event.target.error);
-                            reject(event.target.error);
-                        };
-                    });
-                });
-        } else {
-            console.warn("No blacklist data received from the server or data is not in the expected format.");
-            return Promise.resolve(); // Resolve if no data or incorrect format
-        }
-    })
-    .catch(error => {
-        console.error("Error during blacklist initial sync:", error);
-    });
-}
 
 
 
@@ -128,52 +65,7 @@ function deleteOldBlacklistDatabase(dbName) {
     });
 }
 
-function syncLocalBlacklistWithServer() {
-    blacklistDB.allDocs({ include_docs: true }) // Replace with actual PouchDB for blacklist
-        .then(function (result) {
-            let syncData = result.rows.map(row => row.doc);
 
-            return fetch('sync_blacklist_data.php', { // Assuming this PHP file handles syncing
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(syncData)
-            });
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Blacklist sync complete:', data);
-        })
-        .catch(error => {
-            console.error('Blacklist sync error:', error);
-        });
-}
-
-async function sendBlacklistDataToServer(blacklistEntry, method) {
-    try {
-        const response = await fetch('blacklist_handler.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ ...blacklistEntry, method }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        if (result.success) {
-            console.log(`Blacklist entry successfully ${method === 'add' ? 'added' : 'removed'} from the server.`);
-        } else {
-            console.error(`Failed to ${method === 'add' ? 'add' : 'remove'} blacklist entry from the server:`, result.message);
-        }
-    } catch (error) {
-        console.error('Error sending blacklist data to server:', error);
-    }
-}
 
 
 
@@ -214,9 +106,8 @@ function writeToLocalBlacklist(blacklistEntry) {
 
 // Fetch blacklist from server
 
-
-// Delete a blacklist entry
 function deleteBlackListEntry(id) {
+    // First, delete the entry from the server
     fetch('handle_all_blacklist.php', {
         method: 'DELETE',
         headers: {
@@ -227,15 +118,35 @@ function deleteBlackListEntry(id) {
     .then(response => response.json())
     .then(data => {
         console.log(data.message);
-        fetchBlackList(); // Refresh the list
+
+        // Now, delete the entry from the local IndexedDB
+        openBlacklistDB().then(db => {
+            const transaction = db.transaction(['blacklist'], 'readwrite');
+            const objectStore = transaction.objectStore('blacklist');
+
+            const request = objectStore.delete(id);
+
+            request.onsuccess = () => {
+                console.log('Entry deleted from local DB.');
+                fetchBlackList(); // Refresh the list
+            };
+
+            request.onerror = () => {
+                console.error('Error deleting entry from local DB:', request.error);
+            };
+        }).catch(error => {
+            console.error('Error opening local DB:', error);
+        });
     })
     .catch(error => {
-        console.error('Error deleting blacklist entry:', error);
+        console.error('Error deleting blacklist entry from server:', error);
     });
 }
 
+//new function ,need use
 async function find_people_from_black_list(id) {
     try {
+        // Try fetching data from the server first
         const response = await fetch('handle_all_blacklist.php', {
             method: 'GET',
             headers: {
@@ -259,10 +170,38 @@ async function find_people_from_black_list(id) {
             return null;
         }
     } catch (error) {
-        console.error('Error fetching blacklist data:', error);
-        return null;
+        console.error('Error fetching blacklist data from server:', error);
+        
+        // If server fetch fails, try fetching from local DB
+        try {
+            const db = await openBlacklistDB();
+            const transaction = db.transaction(['blacklist'], 'readonly');
+            const objectStore = transaction.objectStore('blacklist');
+            const request = objectStore.get(id);
+
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => {
+                    if (request.result) {
+                        console.log('Found entry in local DB:', request.result);
+                        resolve(request.result);
+                    } else {
+                        console.log(`No local DB entry found for ID ${id}.`);
+                        resolve(null);
+                    }
+                };
+
+                request.onerror = () => {
+                    console.error('Error fetching data from local DB:', request.error);
+                    reject(null);
+                };
+            });
+        } catch (dbError) {
+            console.error('Error accessing local DB:', dbError);
+            return null;
+        }
     }
 }
+
 
 async function deleteFromLocalBlacklist(id) {
     try {

@@ -166,8 +166,8 @@
     </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        initializeBlacklistSync();
-        initializeItemInputSync();
+        //initializeBlacklistSync();
+        //initializeItemInputSync();
         //item related
         fetchItemInputFromLocalDB().then((items) => {
                 const itemInputBody = document.getElementById('item-input-body');
@@ -251,16 +251,16 @@
             return true; // ID is blacklisted
         } else {
             // If not found locally, check on the server
-            const response = await fetch('handle_all_blacklist.php?id=' + id);
-            if (!response.ok) {
+            //const response = await fetch('handle_all_blacklist.php?id=' + id);
+            /*if (!response.ok) {
                 throw new Error('Failed to fetch from server');
-            }
+            }*/
 
-            const serverResult = await response.json();
-            console.log('Server blacklist check result:', serverResult);
+            //const serverResult = await response.json();
+            //console.log('Server blacklist check result:', serverResult);
 
             // Assuming serverResult contains a list or object with the ID
-            return serverResult.some(entry => entry.id === id);
+            //return serverResult.some(entry => entry.id === id);
         }
     } catch (err) {
         console.error('Error checking blacklist:', err);
@@ -409,7 +409,7 @@ async function validateID() {
 
 
 
-window.onload = initializeSync();
+//window.onload = initializeSync();
     </script>
     
 </body>

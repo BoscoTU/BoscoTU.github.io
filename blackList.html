@@ -421,9 +421,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Trigger fetchBlackList when the page is loaded
     fetchBlackList();
-    initializeBlacklistSync()
+    //initializeBlacklistSync()
 });
 // Modified fetchUserHistory to use localDB if server connection fails
+//new,use this
 function fetchBlackList() {
     document.querySelector('.mdl-spinner').style.display = 'block';
 
@@ -439,12 +440,34 @@ function fetchBlackList() {
     })
     .catch(error => {
         console.error('Error fetching blacklist from server:', error);
-        // Handle local fallback if needed
+
+        // Fallback to local DB if server fetch fails
+        openBlacklistDB().then(db => {
+            const transaction = db.transaction(['blacklist'], 'readonly');
+            const store = transaction.objectStore('blacklist');
+            const request = store.getAll();
+
+            request.onsuccess = (event) => {
+                const localData = event.target.result;
+                if (localData && localData.length > 0) {
+                    populateBlackList(localData);
+                } else {
+                    console.warn('No data found in local DB.');
+                }
+            };
+
+            request.onerror = (event) => {
+                console.error('Error fetching data from local DB:', event.target.error);
+            };
+        }).catch(dbError => {
+            console.error('Error opening local DB:', dbError);
+        });
     })
     .finally(() => {
         document.querySelector('.mdl-spinner').style.display = 'none';
     });
 }
+
 
 function populateBlackList(data) {
     const tbody = document.getElementById('user-history-body');
@@ -529,34 +552,7 @@ function hideConfirmationDialog() {
 // Event listener for "Delete All" button
 deleteAllButton.addEventListener('click', showConfirmationDialog);
 
-// Event listener for "Yes" button in the confirmation dialog
-confirmYes.addEventListener('click', function() {
-    const input = verificationInput.value;
-    if (input === "1+1=3") {
-        console.log('Confirmed deletion of all blacklist.');
-        // Perform the delete operation here (e.g., send a request to delete all records)
-        fetch('handle_all_blacklist.php', {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-        .then(response => response.text())
-        .then(data => {
-            console.log('Deletion response:', data);
-            alert('All records have been deleted.');
-            hideConfirmationDialog();
-            fetchBlackList();  // Refresh the history table
-        })
-        .catch(error => {
-            console.error('Error deleting records:', error);
-            alert('An error occurred while deleting the records.');
-        });
-    } else {
-        console.log('Incorrect confirmation input.');
-        alert('Incorrect input. Please try again.');
-    }
-});
+
 
 // Event listener for "Cancel" button in the confirmation dialog
 confirmNo.addEventListener('click', hideConfirmationDialog);
@@ -581,7 +577,7 @@ document.getElementById('restore-btn').addEventListener('click', async function(
         await deleteFromLocalBlacklist(idInput);
 
         // Delete the ID from the server-side blacklist
-        await sendBlacklistDataToServer({ id: idInput }, 'delete');
+        //await sendBlacklistDataToServer({ id: idInput }, 'delete');
 
         // Confirm the action
         alert('Blacklist entry successfully removed!');
@@ -640,7 +636,7 @@ document.getElementById('blackListButton').addEventListener('click', async funct
             // Write to the local blacklist
             await writeToLocalBlacklist(blacklistEntry);
 
-            await sendBlacklistDataToServer(blacklistEntry,'add');
+            //await sendBlacklistDataToServer(blacklistEntry,'add');
 
             alert('User successfully added to blacklist.');
             fetchBlackList()
@@ -691,7 +687,7 @@ function writeToLocalBlacklist(blacklistEntry) {
 }
 
 
-window.onload = initializeSync();
+//window.onload = initializeSync();
       </script>
      
   </body>

@@ -4,12 +4,12 @@ let actionHistoryDB; // Declare actionHistoryDB in the global scope
 function initializeSync() {
     // Pass the correct database name to syncFromServerToLocal
     const dbName = 'actionHistoryDB'; // Replace with your actual database name
-    syncFromServerToLocal(dbName).catch(error => {
+    /*syncFromServerToLocal(dbName).catch(error => {
         console.error('Error initializing sync:', error);
-    });
+    }*/;
 }
 
-function syncFromServerToLocal(dbName) {
+/*function syncFromServerToLocal(dbName) {
     console.log("Starting syncFromServerToLocal with database:", dbName);
 
     return fetch('get_initial_data.php')
@@ -94,48 +94,8 @@ function syncFromServerToLocal(dbName) {
             console.error("Error during initial sync:", error);
         });
 }
+*/
 
-
-function openIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('actionHistoryDB', 2); // Use correct database name and version
-
-        request.onupgradeneeded = function(event) {
-            const db = event.target.result;
-            console.log('Upgrading actionHistoryDB database...');
-
-            if (!db.objectStoreNames.contains('actionHistoryDB')) {
-                const objectStore = db.createObjectStore('actionHistoryDB', { keyPath: 'id' });
-                // Define indices if needed
-                objectStore.createIndex('byTimestamp', 'timestamp', { unique: false });
-                objectStore.createIndex('byAction', 'action', { unique: false });
-                objectStore.createIndex('byCanBorrow', 'can_borrow', { unique: false });
-                objectStore.createIndex('byName', 'name', { unique: false });
-                objectStore.createIndex('byClass', 'class', { unique: false });
-                objectStore.createIndex('byClassNumber', 'class_number', { unique: false });
-                objectStore.createIndex('byDate', 'date', { unique: false });
-                objectStore.createIndex('byPeriod', 'period', { unique: false });
-                objectStore.createIndex('byItemDealtWith', 'item_dealt_with', { unique: false });
-                objectStore.createIndex('byAdditionalInformation', 'additional_information', { unique: false });
-            }
-        };
-
-        request.onsuccess = function(event) {
-            console.log('actionHistoryDB opened successfully.');
-            resolve(event.target.result);
-        };
-
-        request.onerror = function(event) {
-            console.error('Error opening actionHistoryDB:', event.target.error);
-            reject(event.target.error);
-        };
-
-        request.onblocked = function() {
-            console.error('Database upgrade blocked. Please close other tabs or applications using this database.');
-            reject(new Error('Database upgrade blocked.'));
-        };
-    });
-}
 
 
 
@@ -220,7 +180,7 @@ function get_detail(userid, type) {
                     } else {
                         console.log("Data not found in local DB or does not meet criteria. Fetching from server...");
                         // Data not found or does not meet criteria, fall back to server
-                        return fetchFromServer(userid, type)
+                        /*return fetchFromServer(userid, type)
                             .then(serverData => {
                                 console.log("Data fetched from server:", serverData);
 
@@ -246,14 +206,14 @@ function get_detail(userid, type) {
                                     console.log("Fetched data from server does not meet criteria.");
                                     return null;
                                 }
-                            });
+                            });*/
                     }
                 });
         })
         .catch(err => {
             console.error("Error getting user detail:", err);
             // On error, fall back to fetching data from the server
-            return fetchFromServer(userid, type);
+            //return fetchFromServer(userid, type);
         });
 }
 
@@ -297,38 +257,6 @@ function getFromLocalDB(db, id, type) {
 
 
 
-function fetchFromServer(userid, type) {
-    return new Promise(function (resolve, reject) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "get_user_detail.php?userid=" + encodeURIComponent(userid) + "&type=" + encodeURIComponent(type), true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState == 4) {
-                if (xhr.status == 200) {
-                    var response;
-                    try {
-                        response = JSON.parse(xhr.responseText);
-                        console.log('Server response:', response);
-                    } catch (e) {
-                        console.error("Error parsing JSON response:", e);
-                        reject("Error parsing JSON response");
-                        return;
-                    }
-                    if (response && !response.error) {
-                        resolve(response);
-                    } else {
-                        console.error("Server returned error:", response.error);
-                        resolve(null);  // or reject(response.error) based on your logic
-                    }
-                } else {
-                    console.error("Error fetching data from server. Status:", xhr.status, "Response:", xhr.responseText);
-                    reject("Error fetching data from server");
-                }
-            }
-        };
-        xhr.send();
-    });
-}
-
 function sendBorrowDataToServer(borrowData) {
     // Ensure IndexedDB is initialized before proceeding
     return openIndexedDB()
@@ -347,53 +275,11 @@ function sendBorrowDataToServer(borrowData) {
                 };
             });
         })
-        .then(() => {
-            // Optionally, sync with server
-            return fetch('write_history.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(borrowData)
-            });
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                throw new Error(`Server error: ${data.error}`);
-            }
-            return data;
-        })
-        .catch(error => {
-            console.error("Error syncing with server:", error);
-            // Handle additional logic if needed, such as retrying or notifying the user
-            return Promise.reject(error);
-        });
+        
 }
 
 // Function to sync local PouchDB with MySQL through PHP
 function syncLocalDBWithServer() {
-    // Get all documents from the local PouchDB
-    actionHistoryDB.allDocs({ include_docs: true })
-        .then(function (result) {
-            // Prepare data for syncing
-            let syncData = result.rows.map(row => row.doc);
-
-            // Send data to the PHP script
-            return fetch('sync_data.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(syncData)
-            });
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Sync complete:', data);
-        })
-        .catch(error => {
-            console.error('Sync error:', error);
-        });
+ 
 }
 
